@@ -1,11 +1,13 @@
 import { MOODS, GENRE_ICON } from './movies.js';
-import { COLLECTIONS, isOnline, loadCollection, search, details, matchesMood } from './source.js';
+import { COLLECTIONS, loadCollection, search, details, matchesMood } from './source.js';
 
 const $ = (s) => document.querySelector(s);
 const LIST_KEY = 'movies_watchlist_v2';
 
+const SHOW_STEP = 30;
 const state = {
-  collection: 'popular',
+  collection: 'new',
+  shown: SHOW_STEP, // сколько карточек показано (остальные — по кнопке «Показать ещё»)
   mood: null,
   q: '',
   genre: '',
@@ -13,8 +15,6 @@ const state = {
   sort: 'default',
   tab: 'all',
   items: [],      // загруженные фильмы текущей подборки или поиска
-  page: 1,
-  hasMore: false,
   loading: false,
   local: false,
 };
@@ -32,27 +32,20 @@ const gradient = (m) => { const h = hue(m.t); return `background: linear-gradien
 const icon = (m) => GENRE_ICON[m.g[0]] ?? '🎬';
 
 // ---------- Загрузка ----------
-async function load(reset = true) {
+async function load() {
   const id = ++requestId;
-  if (reset) { state.page = 1; state.items = []; }
+  state.items = [];
+  state.shown = SHOW_STEP;
   state.loading = true;
   render();
-  try {
-    const res = state.q.trim()
-      ? await search(state.q.trim(), state.page)
-      : await loadCollection(state.collection, state.page);
-    if (id !== requestId) return;
-    const seen = new Set(state.items.map((m) => m.id));
-    state.items.push(...res.items.filter((m) => !seen.has(m.id)));
-    state.hasMore = res.hasMore;
-    state.local = Boolean(res.local);
-  } catch {
-    if (id !== requestId) return;
-    state.hasMore = false;
-    toastError('Кинопоиск сейчас не отвечает. Попробуйте позже.');
-  } finally {
-    if (id === requestId) { state.loading = false; renderFilters(); render(); }
-  }
+  const res = state.q.trim() ? await search(state.q.trim()) : await loadCollection(state.collection);
+  if (id !== requestId) return;
+  state.items = res.items;
+  state.local = Boolean(res.local);
+  state.loading = false;
+  if (res.failed) toastError('Свежая база сейчас не отвечает — показываю встроенную подборку.');
+  renderFilters();
+  render();
 }
 
 // ---------- Фильтрация ----------
@@ -68,7 +61,6 @@ function visible() {
 
 // ---------- Отрисовка ----------
 function renderFilters() {
-  $('#collections').hidden = state.local;
   $('#collections').innerHTML = COLLECTIONS.map((c) => `<button class="chip chip--col ${!state.q && state.collection === c.id ? 'is-active' : ''}" data-col="${c.id}">${c.name}</button>`).join('');
   $('#moods').innerHTML = MOODS.map((m) => `<button class="chip ${state.mood === m.id ? 'is-active' : ''}" data-mood="${m.id}">${m.name}</button>`).join('');
 
@@ -80,7 +72,7 @@ function renderFilters() {
   $('#decade').innerHTML = `<option value="">Любые годы</option>${decades.map((d) => `<option value="${d}">${d}-е</option>`).join('')}`;
   $('#decade').value = decades.includes(Number(state.decade)) ? state.decade : '';
   $('#sort').value = state.sort;
-  $('#source').innerHTML = state.local ? '📼 Встроенная подборка' : 'Данные: <a href="https://www.kinopoisk.ru" target="_blank" rel="noopener">Кинопоиск</a>';
+  $('#source').innerHTML = state.local ? '📼 Встроенная подборка' : 'Данные: <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> и Википедия';
 }
 
 function card(m) {
@@ -90,7 +82,7 @@ function card(m) {
     <button class="poster" style="${gradient(m)}" data-open="${m.id}" aria-label="Подробнее: ${escapeHTML(m.t)}">
       <span class="poster__icon">${icon(m)}</span><span class="poster__title">${escapeHTML(m.t)}</span>
       ${m.poster ? `<img src="${escapeHTML(m.poster)}" alt="" loading="lazy" onerror="this.remove()">` : ''}
-      ${m.r ? `<span class="poster__rating">★ ${m.r.toFixed(1)}</span>` : m.premiere ? '<span class="poster__rating poster__rating--new">Премьера</span>' : ''}
+      ${m.r ? `<span class="poster__rating">★ ${m.r.toFixed(1)}</span>` : m.y >= new Date().getFullYear() ? '<span class="poster__rating poster__rating--new">Новинка</span>' : ''}
     </button>
     <button class="save ${saved ? 'is-on' : ''}" data-save="${m.id}" aria-label="${saved ? 'Убрать из списка' : 'Посмотреть позже'}">${saved ? '♥' : '♡'}</button>
     <div class="movie__meta"><b>${escapeHTML(m.t)}</b><span>${escapeHTML(meta)}</span></div>
@@ -98,19 +90,18 @@ function card(m) {
 }
 
 function render() {
-  const list = visible();
+  const all = visible();
+  const list = state.tab === 'all' ? all.slice(0, state.shown) : all;
   $('#countAll').textContent = state.items.length || '';
   $('#countList').textContent = Object.keys(watchlist).length || '';
   if (state.loading && !state.items.length && state.tab === 'all') {
-    $('#grid').innerHTML = Array.from({ length: 10 }, () => '<div class="movie skeleton"><div class="poster"></div><div class="movie__meta"><b></b><span></span></div></div>').join('');
+    $('#grid').innerHTML = '<p class="loading-note">Собираю свежие фильмы…</p>' + Array.from({ length: 10 }, () => '<div class="movie skeleton"><div class="poster"></div><div class="movie__meta"><b></b><span></span></div></div>').join('');
   } else if (!list.length) {
     $('#grid').innerHTML = `<div class="empty">${state.tab === 'list' && !Object.keys(watchlist).length ? '♡<p>Добавляйте фильмы сердечком — они появятся здесь.</p>' : '🍿<p>Ничего не нашлось. Попробуйте другое настроение или жанр.</p>'}</div>`;
   } else {
     $('#grid').innerHTML = list.map(card).join('');
   }
-  $('#moreBtn').hidden = state.tab !== 'all' || !state.hasMore;
-  $('#moreBtn').disabled = state.loading;
-  $('#moreBtn').textContent = state.loading ? 'Загружаю…' : 'Показать ещё';
+  $('#moreBtn').hidden = state.tab !== 'all' || all.length <= state.shown;
 }
 
 // ---------- Карточка фильма ----------
@@ -138,17 +129,16 @@ function showMovie(m, fromRoulette, loading) {
         <h2>${escapeHTML(m.t)}</h2>
         ${m.orig && m.orig !== m.t ? `<p class="detail__orig">${escapeHTML(m.orig)}</p>` : ''}
         <p class="detail__meta">
-          ${m.r ? `<span class="badge">КП ${m.r.toFixed(1)}</span>` : ''}
-          ${m.rImdb && !m.id.startsWith('local') ? `<span class="badge badge--imdb">IMDb ${m.rImdb.toFixed(1)}</span>` : ''}
+          ${m.r ? `<span class="badge badge--imdb">IMDb ${m.r.toFixed(1)}</span>` : ''}
           ${escapeHTML([m.y, hm(m.d), m.country].filter(Boolean).join(' · '))}
         </p>
         <p class="detail__genres">${m.g.map((g) => `<span>${GENRE_ICON[g] ?? ''} ${escapeHTML(g)}</span>`).join('')}</p>
         <p class="detail__plot">${m.s ? escapeHTML(m.s) : loading ? '<span class="shimmer">Загружаю описание…</span>' : 'Описания пока нет.'}</p>
-        ${m.premiere ? `<p class="detail__premiere">В кино с ${new Date(m.premiere).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}</p>` : ''}
+        ${m.date && m.y >= new Date().getFullYear() ? `<p class="detail__premiere">Премьера: ${new Date(m.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}</p>` : ''}
         <div class="detail__actions">
           <button class="btn ${saved ? '' : 'btn--primary'}" data-save="${m.id}">${saved ? '♥ В списке' : '♡ Посмотреть позже'}</button>
           <a class="btn" href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener">▶ Трейлер</a>
-          ${m.url ? `<a class="btn" href="${escapeHTML(m.url)}" target="_blank" rel="noopener">Кинопоиск ↗</a>` : ''}
+          ${m.url ? `<a class="btn" href="${escapeHTML(m.url)}" target="_blank" rel="noopener">${m.kpId ? 'Кинопоиск' : 'Википедия'} ↗</a>` : ''}
           ${fromRoulette ? '<button class="btn" id="spinAgain">🎰 Ещё раз</button>' : ''}
         </div>
       </div>
@@ -178,7 +168,7 @@ function roulette() {
 }
 
 // ---------- Список «посмотреть позже» ----------
-const slim = (m) => ({ id: m.id, kpId: m.kpId, t: m.t, orig: m.orig, y: m.y, g: m.g, country: m.country, r: m.r, rImdb: m.rImdb, d: m.d, s: m.s, poster: m.poster, posterBig: m.posterBig, url: m.url, moods: m.moods });
+const slim = (m) => ({ id: m.id, kpId: m.kpId, t: m.t, orig: m.orig, y: m.y, date: m.date, g: m.g, country: m.country, r: m.r, d: m.d, s: m.s, poster: m.poster, posterBig: m.posterBig, url: m.url, wiki: m.wiki, moods: m.moods });
 
 function toggleSave(id) {
   if (watchlist[id]) delete watchlist[id];
@@ -237,12 +227,9 @@ $('#search').addEventListener('input', (e) => {
 $('#genre').addEventListener('change', (e) => { state.genre = e.target.value; render(); });
 $('#decade').addEventListener('change', (e) => { state.decade = e.target.value; render(); });
 $('#sort').addEventListener('change', (e) => { state.sort = e.target.value; render(); });
-$('#moreBtn').addEventListener('click', () => { state.page++; load(false); });
+$('#moreBtn').addEventListener('click', () => { state.shown += SHOW_STEP; render(); });
 $('#rouletteBtn').addEventListener('click', roulette);
 
 // ---------- Старт ----------
 renderFilters();
-isOnline().then((ok) => {
-  if (!ok) state.sort = 'rating';
-  load();
-});
+load();

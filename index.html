@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Что посмотреть</title>
-  <meta name="description" content="Подбор фильма на вечер: фильтры по жанру, настроению и длительности, рулетка и список «посмотреть позже».">
+  <meta name="description" content="Подбор фильма на вечер: популярное, топ-250 и премьеры Кинопоиска, фильтры по настроению, рулетка и список «посмотреть позже».">
   <meta name="theme-color" content="#0c0a0b">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,29 +21,28 @@
 
   <main class="app">
     <section class="filters">
+      <div class="chips" id="collections" aria-label="Подборки"></div>
       <div class="chips" id="moods" aria-label="Настроение"></div>
       <div class="row">
-        <input id="search" class="input" type="search" placeholder="Поиск по названию" aria-label="Поиск">
+        <input id="search" class="input" type="search" placeholder="Поиск по названию" aria-label="Поиск" enterkeyhint="search">
         <select id="genre" class="input" aria-label="Жанр"></select>
         <select id="decade" class="input" aria-label="Десятилетие"></select>
         <select id="sort" class="input" aria-label="Сортировка">
+          <option value="default">Как в подборке</option>
           <option value="rating">По рейтингу</option>
           <option value="new">Сначала новые</option>
-          <option value="short">Сначала короткие</option>
         </select>
       </div>
-      <label class="range">
-        <span>Длительность до <b id="durLabel"></b></span>
-        <input type="range" id="dur" min="90" max="210" step="10" value="210">
-      </label>
     </section>
 
     <nav class="tabs">
-      <button class="tab is-active" data-tab="all">Все фильмы <span id="countAll"></span></button>
+      <button class="tab is-active" data-tab="all">Фильмы <span id="countAll"></span></button>
       <button class="tab" data-tab="list">Посмотреть позже <span id="countList"></span></button>
+      <span class="source" id="source"></span>
     </nav>
 
     <section class="grid" id="grid" aria-live="polite"></section>
+    <button class="more" id="moreBtn" hidden>Показать ещё</button>
   </main>
 
   <div class="modal" id="modal" hidden>

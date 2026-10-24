@@ -27,9 +27,6 @@ button { cursor: pointer; }
 @media (min-width: 760px) { .row { grid-template-columns: 2fr 1fr 1fr 1fr; } .row #search { grid-column: auto; } }
 .input { width: 100%; min-width: 0; padding: 11px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); font-size: 16px; outline: none; }
 .input:focus { border-color: var(--red); }
-.range { display: grid; gap: 4px; font-size: 14px; color: var(--muted); }
-.range b { color: var(--text); }
-.range input { width: 100%; accent-color: var(--red); }
 
 .tabs { display: flex; gap: 6px; margin: 22px 0 16px; border-bottom: 1px solid var(--border); }
 .tab { padding: 10px 4px; margin-right: 16px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); font-weight: 700; }
@@ -91,3 +88,34 @@ button { cursor: pointer; }
 .slot__item { display: flex; flex-direction: column; justify-content: flex-end; aspect-ratio: 2 / 3; padding: 12px; border-radius: 14px; text-align: left; color: #fff; }
 .slot__item span { margin: auto; font-size: 60px; }
 .slot__item b { font: 600 19px/1.05 Oswald, sans-serif; }
+
+/* ---------- Данные Кинопоиска ---------- */
+.chip--col { font-weight: 700; }
+.chip--col.is-active { background: var(--red); border-color: var(--red); color: #fff; }
+.poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.poster img + .poster__rating, .poster__rating { z-index: 1; }
+.poster__rating--new { color: #fff; background: var(--red); }
+.tabs { align-items: center; }
+.source { margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.source a { color: var(--text); }
+@media (max-width: 480px) { .source { display: none; } }
+.more { display: block; margin: 26px auto 0; padding: 13px 28px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); font-weight: 700; }
+.more:hover { border-color: var(--red); }
+.more:disabled { opacity: 0.6; }
+.skeleton .poster { background: linear-gradient(100deg, var(--surface) 40%, var(--surface-2) 50%, var(--surface) 60%) 0 0 / 200% 100%; animation: shine 1.2s linear infinite; }
+.skeleton .movie__meta b, .skeleton .movie__meta span { display: block; height: 12px; margin-top: 6px; border-radius: 6px; background: var(--surface-2); }
+.skeleton .movie__meta span { width: 60%; }
+@keyframes shine { to { background-position: -200% 0; } }
+.error { margin: 0 0 14px; padding: 12px 14px; border-radius: 12px; background: rgba(225, 29, 72, 0.15); color: #fda4af; }
+.detail__poster { position: relative; overflow: hidden; }
+.detail__poster img { width: 100%; height: 100%; max-height: 420px; object-fit: cover; display: block; }
+@media (max-width: 639px) { .detail__poster { max-height: 260px; } .detail__poster img { object-position: center 25%; } }
+.detail__orig { margin: 4px 0 0; color: var(--muted); }
+.badge { margin-right: 4px; }
+.badge--imdb { background: rgba(245, 197, 24, 0.12); color: #f5c518; }
+.detail__premiere { margin: -8px 0 16px; color: var(--red); font-weight: 700; }
+.shimmer { color: var(--muted); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.4; } }
+.slot__item { position: relative; overflow: hidden; }
+.slot__item img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.slot__item b { position: relative; z-index: 1; text-shadow: 0 2px 10px #000; }

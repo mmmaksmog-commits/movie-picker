@@ -2,7 +2,7 @@
 
 **Подбор фильма на вечер по настроению.**
 
-### ▶️ [Открыть](https://mmmaksmog-commits.github.io/movie-picker/)
+### ▶️ [Открыть](https://mysik-portfolio.vercel.app/movie-picker/)
 
 Работает на телефоне и на ПК, без установки и регистрации.
 
@@ -30,4 +30,4 @@ python3 -m http.server 8000
 
 ---
 
-Часть [портфолио](https://mmmaksmog-commits.github.io/).
+Часть [портфолио](https://mysik-portfolio.vercel.app/).
